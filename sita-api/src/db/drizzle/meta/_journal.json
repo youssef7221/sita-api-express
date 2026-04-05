@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1775349510381,
+      "tag": "0000_loving_legion",
+      "breakpoints": true
+    }
+  ]
+}
