@@ -11,7 +11,6 @@ export class ApiResponse<T> {
     this.timestamp = new Date().toISOString();
   }
 
-  // Static methods عشان تبقى أسهل في الاستخدام
   static success<T>(message: string, data?: T) {
     return new ApiResponse("success", message, data);
   }
