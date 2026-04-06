@@ -1,4 +1,4 @@
-import {AppError} from "../../../postsapi/src/errors/appErrors";
+import {AppError} from "../errors/appErrors";
 import {Request, Response, NextFunction} from "express";
 import { ApiResponse } from "./ApiResponse";
 export const errorMiddleware = (err: AppError, req: Request, res: Response, next: NextFunction) => {

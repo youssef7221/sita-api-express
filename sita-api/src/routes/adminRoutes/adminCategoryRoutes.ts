@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { validate } from "../middleware/validateMiddleware";
-import * as categoriesController from "../controllers/categoriesController";
-import { CreateCategorySchema, UpdateCategorySchema } from "../dtos/categoryDto";
-import { authMiddleware } from "../middleware/authMiddleware";
+import { validate } from "../../middleware/validateMiddleware";
+import * as categoriesController from "../../controllers/categoriesController";
+import { CreateCategorySchema, UpdateCategorySchema } from "../../dtos/category/categoryDto";
+import { authMiddleware } from "../../middleware/authMiddleware";
 
 const router = Router();
 

@@ -1,8 +1,8 @@
 import {Router} from "express";
-import { validate } from "../../../sita-api/src/middleware/validateMiddleware";
-import * as adminController from "../controllers/adminController";
-import {  LoginSchema, RegisterSchema } from "../dtos/auth/authDto";
-import { authMiddleware } from "../middleware/authMiddleware";
+import { validate } from "../../middleware/validateMiddleware";
+import * as adminController from "../../controllers/adminController";
+import {  LoginSchema, RegisterSchema } from "../../dtos/auth/authDto";
+import { authMiddleware } from "../../middleware/authMiddleware";
 
 const router = Router();
 

@@ -2,9 +2,11 @@ import express from "express";
 import cors from "cors";
 import { errorMiddleware } from "./middleware/errormiddleware";
 import { loggerMiddleware } from "./middleware/loggerMiddleware";
-import adminsRoute from "./routes/adminRoutes";
+import adminsRoute from "./routes/adminRoutes/adminRoutes";
 import categoryRoutes from "./routes/categoryRoutes";
-import adminCategoryRoutes from "./routes/adminCategoryRoutes";
+import adminCategoryRoutes from "./routes/adminRoutes/adminCategoryRoutes";
+import governoratesRoutes from "./routes/governoratesRoutes";
+import adminGovernoratesRoutes from "./routes/adminRoutes/adminGovernoratesRoutes";
 
 export const ADMIN_BASE_ROUTE = "/api/admin";
 
@@ -17,6 +19,8 @@ app.use(loggerMiddleware);
 app.use(ADMIN_BASE_ROUTE, adminsRoute);
 app.use(`${ADMIN_BASE_ROUTE}/categories`, adminCategoryRoutes);
 app.use("/api/categories", categoryRoutes);
+app.use("/api/governorates", governoratesRoutes);
+app.use(`${ADMIN_BASE_ROUTE}/governorates`, adminGovernoratesRoutes);
 
 app.get("/health", (req, res) => {
   res.json({ status: "OK" });
