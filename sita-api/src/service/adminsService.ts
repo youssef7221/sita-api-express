@@ -3,7 +3,7 @@ import {admins} from "../db/drizzle/schema";
 import {eq} from "drizzle-orm";
 import { LoginDto, RegisterDto } from "../dtos/auth/authDto";
 import bcrypt from "bcrypt";
-import { ExistsAlready, NotFoundError, UnauthorizedError } from "../../../postsapi/src/errors/appErrors";
+import { ExistsAlready, NotFoundError, UnauthorizedError } from "../errors/appErrors";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 

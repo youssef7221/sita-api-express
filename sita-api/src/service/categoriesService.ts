@@ -1,8 +1,8 @@
 import { db } from "../db";
 import { categories } from "../db/drizzle/schema";
 import { eq, sql } from "drizzle-orm";
-import { CreateCategoryDto, UpdateCategoryDto } from "../dtos/categoryDto";
-import { NotFoundError, ExistsAlready } from "../../../postsapi/src/errors/appErrors";
+import { CreateCategoryDto, UpdateCategoryDto } from "../dtos/category/categoryDto";
+import { NotFoundError, ExistsAlready } from "../errors/appErrors";
 
 const generateSlug = (name: string) => {
     return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
