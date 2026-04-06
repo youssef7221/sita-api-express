@@ -1,21 +1,24 @@
-export class ApiResponse<T> {
-  public status: string;
-  public message: string;
-  public data?: T;
-  public timestamp: string;
+export interface MetaData {
+  page: number;
+  perPage: number;
+  total: number;
+  totalPages: number;
+}
 
-  constructor(status: string, message: string, data?: T) {
-    this.status = status;
-    this.message = message;
+export class ApiResponse<T> {
+  public data?: T;
+  public meta?: MetaData;
+
+  constructor(data?: T, meta?: MetaData) {
     this.data = data;
-    this.timestamp = new Date().toISOString();
+    this.meta = meta;
   }
 
-  static success<T>(message: string, data?: T) {
-    return new ApiResponse("success", message, data);
+  static success<T>(data?: T, meta?: MetaData) {
+    return new ApiResponse(data, meta);
   }
 
   static error(message: string) {
-    return new ApiResponse("error", message);
+    return { success: false, message };
   }
 }
