@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import { UnauthorizedError } from "../../../postsapi/src/errors/appErrors";
 
 export interface AuthRequest extends Request {
-    user?: { id: number; email: string };
+    user?: any;
 }
 
 export const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -11,10 +11,7 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
         const token = req.headers.authorization?.split(" ")[1];
         if (!token) throw new UnauthorizedError("No token provided");
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
-            id: number;
-            email: string;
-        };
+        const decoded = jwt.verify(token, process.env.JWT_SECRET!);
 
         req.user = decoded;
         next();
