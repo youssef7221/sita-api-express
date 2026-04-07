@@ -7,6 +7,7 @@ import categoryRoutes from "./routes/categoryRoutes";
 import adminCategoryRoutes from "./routes/adminRoutes/adminCategoryRoutes";
 import governoratesRoutes from "./routes/governoratesRoutes";
 import adminGovernoratesRoutes from "./routes/adminRoutes/adminGovernoratesRoutes";
+import adminSettingsRoutes from "./routes/adminRoutes/adminSettingsRoutes";
 
 export const ADMIN_BASE_ROUTE = "/api/admin";
 
@@ -21,6 +22,7 @@ app.use(`${ADMIN_BASE_ROUTE}/categories`, adminCategoryRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/governorates", governoratesRoutes);
 app.use(`${ADMIN_BASE_ROUTE}/governorates`, adminGovernoratesRoutes);
+app.use(`${ADMIN_BASE_ROUTE}/settings`, adminSettingsRoutes);
 
 app.get("/health", (req, res) => {
   res.json({ status: "OK" });
