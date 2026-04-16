@@ -1,6 +1,6 @@
 import * as adminSevice from '../service/adminsService';
 import { Request, Response } from 'express';
-import { ApiResponse } from '../middleware/ApiResponse';
+import { ApiResponse } from '../utils/ApiResponse';
 import { NextFunction } from 'express';
 
 export const getCurrentAdmin = async (req: any, res: Response, next: NextFunction) => {

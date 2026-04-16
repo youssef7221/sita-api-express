@@ -1,6 +1,6 @@
 import * as settingsService from '../service/settingsService';
 import { Request, Response, NextFunction } from 'express';
-import { ApiResponse } from '../middleware/ApiResponse';
+import { ApiResponse } from '../utils/ApiResponse';
 
 export const getSettingByKey = async (req: Request, res: Response, next: NextFunction) => {
     try {
