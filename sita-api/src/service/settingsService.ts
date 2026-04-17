@@ -1,9 +1,7 @@
-import { db } from "../db";
-import { settings } from "../db/drizzle/schema";
-import { eq } from "drizzle-orm";
-import { NotFoundError, ExistsAlready } from "../errors/appErrors";
+import { NotFoundError } from "../errors/appErrors";
 import { UpdateSettingDto } from "../dtos/settings/settingsDto";
 import { createServiceLogger } from "../utils/serviceLogger";
+import { settingsRepository } from "../repository";
 
 const logger = createServiceLogger("SettingsService");
 
@@ -17,27 +15,25 @@ const parseSettingValue = (val: string | null) => {
 export const getSettingByKey = async (key: string) => {
     logger.info("Get setting by key", { key });
 
-    const settingRows = await db.select().from(settings).where(eq(settings.settingKey, key)).limit(1);
-    if (!settingRows[0]) {
+    const settingRow = await settingsRepository.findSettingByKey(key);
+    if (!settingRow) {
         logger.warn("Get setting by key failed: not found", { key });
         throw new NotFoundError(`Setting key ${key} not found`);
     }
 
     return {
-        key: settingRows[0].settingKey,
-        value: parseSettingValue(settingRows[0].settingValue)
+        key: settingRow.settingKey,
+        value: parseSettingValue(settingRow.settingValue)
     };
 };
 
 export const updateSetting = async (key: string, dto: UpdateSettingDto) => {
     logger.info("Update setting started", { key });
 
-    const settingRows = await db.select().from(settings).where(eq(settings.settingKey, key)).limit(1);
+    const settingRow = await settingsRepository.findSettingByKey(key);
     
-    if (settingRows[0]) {
-        await db.update(settings)
-            .set({ settingValue: String(dto.value) })
-            .where(eq(settings.settingKey, key));
+    if (settingRow) {
+        await settingsRepository.updateSettingByKey(key, String(dto.value));
     } else {
        logger.warn("Update setting failed: not found", { key });
        throw new NotFoundError(`Setting key ${key} not found`);

@@ -1,20 +1,11 @@
-import { asc, eq, sql } from "drizzle-orm";
 import { db } from "../db";
-import { productImages, products } from "../db/drizzle/schema";
 import { ProductImageResponseDto, UploadProductImagesDto } from "../dtos/product/productImageDto";
 import { BadRequestError, InternalServerError, NotFoundError } from "../errors/appErrors";
+import { productImageRepository } from "../repository";
 import { createServiceLogger } from "../utils/serviceLogger";
 import { deleteImage, uploadImage } from "../utils/uploadImage";
 
-type CloudinaryPublicIdRow = { publicId: string | null };
 const logger = createServiceLogger("ProductImageService");
-
-const extractRows = <T>(rawResult: any): T[] => {
-	if (Array.isArray(rawResult)) return rawResult as T[];
-	if (Array.isArray(rawResult?.rows)) return rawResult.rows as T[];
-	if (Array.isArray(rawResult?.[0])) return rawResult[0] as T[];
-	return [];
-};
 
 const validatePositiveInt = (value: number, fieldName: string) => {
 	if (!Number.isInteger(value) || value <= 0) {
@@ -44,25 +35,10 @@ const parsePublicIdFromUrl = (url: string): string | null => {
 	}
 };
 
-const getProductImagePublicId = async (imageId: number): Promise<string | null> => {
-	try {
-		const rawResult: any = await db.execute(
-			sql`SELECT public_id AS publicId FROM product_images WHERE image_id = ${imageId} LIMIT 1`
-		);
-		const rows = extractRows<CloudinaryPublicIdRow>(rawResult);
-		return rows[0]?.publicId ?? null;
-	} catch {
-		return null;
-	}
-};
-
 const ensureProductExists = async (productId: number) => {
-	const productRows = await db.select({ productId: products.productId })
-		.from(products)
-		.where(eq(products.productId, productId))
-		.limit(1);
+	const product = await productImageRepository.findProductById(productId);
 
-	if (!productRows[0]) {
+	if (!product) {
 		throw new NotFoundError("Product not found");
 	}
 };
@@ -86,9 +62,7 @@ export const uploadProductImages = async (
 
 	await ensureProductExists(productId);
 
-	const existingImages = await db.select()
-		.from(productImages)
-		.where(eq(productImages.productId, productId));
+	const existingImages = await productImageRepository.findImagesByProductId(productId);
 
 	const hasPrimaryImage = existingImages.some((image) => Number(image.isPrimary) === 1);
 	const primaryIndex = dto.primaryIndex;
@@ -124,9 +98,7 @@ export const uploadProductImages = async (
 	try {
 		const createdImages = await db.transaction(async (tx) => {
 			if (primaryIndex !== undefined) {
-				await tx.update(productImages)
-					.set({ isPrimary: 0 })
-					.where(eq(productImages.productId, productId));
+				await productImageRepository.clearPrimaryByProductIdTx(tx, productId);
 			}
 
 			const createdImages: ProductImageResponseDto[] = [];
@@ -136,7 +108,7 @@ export const uploadProductImages = async (
 				const isPrimary = primaryIndex !== undefined ? index === primaryIndex : false;
 				const displayOrder = maxDisplayOrder + index + 1;
 
-				const [insertResult] = await tx.insert(productImages).values({
+				const [insertResult] = await productImageRepository.insertProductImageTx(tx, {
 					productId,
 					imageUrl: uploaded.url,
 					isPrimary: isPrimary ? 1 : 0,
@@ -149,9 +121,7 @@ export const uploadProductImages = async (
 					throw new InternalServerError("Failed to save image record");
 				}
 
-				await (tx as any).execute(
-					sql`UPDATE product_images SET public_id = ${uploaded.publicId} WHERE image_id = ${imageId}`
-				);
+				await productImageRepository.updateImagePublicIdTx(tx, imageId, uploaded.publicId);
 
 				createdImages.push({
 					imageId,
@@ -200,12 +170,7 @@ export const deleteProductImage = async (productId: number, imageId: number) => 
 	validatePositiveInt(productId, "productId");
 	validatePositiveInt(imageId, "imageId");
 
-	const imageRows = await db.select()
-		.from(productImages)
-		.where(eq(productImages.imageId, imageId))
-		.limit(1);
-
-	const image = imageRows[0];
+	const image = await productImageRepository.findImageById(imageId);
 
 	if (!image) {
 		throw new NotFoundError("Product image not found");
@@ -215,7 +180,7 @@ export const deleteProductImage = async (productId: number, imageId: number) => 
 		throw new NotFoundError("Product image not found for this product");
 	}
 
-	const publicId = (await getProductImagePublicId(imageId)) ?? parsePublicIdFromUrl(image.imageUrl);
+	const publicId = (await productImageRepository.getProductImagePublicId(imageId)) ?? parsePublicIdFromUrl(image.imageUrl);
 
 	if (!publicId) {
 		logger.error("Delete product image failed: missing public_id", new Error("Image public_id is missing"), {
@@ -236,22 +201,14 @@ export const deleteProductImage = async (productId: number, imageId: number) => 
 		let reassignedPrimaryImageId: number | null = null;
 
 		await db.transaction(async (tx) => {
-			await tx.delete(productImages).where(eq(productImages.imageId, imageId));
+			await productImageRepository.deleteProductImageTx(tx, imageId);
 
 			if (Number(image.isPrimary) === 1) {
-				const nextImageRows = await tx.select()
-					.from(productImages)
-					.where(eq(productImages.productId, image.productId))
-					.orderBy(asc(productImages.displayOrder), asc(productImages.imageId))
-					.limit(1);
-
-				const nextImage = nextImageRows[0];
+				const nextImage = await productImageRepository.findNextProductImageForPrimaryTx(tx, image.productId);
 
 				if (nextImage) {
 					reassignedPrimaryImageId = nextImage.imageId;
-					await tx.update(productImages)
-						.set({ isPrimary: 1 })
-						.where(eq(productImages.imageId, nextImage.imageId));
+					await productImageRepository.markImageAsPrimaryTx(tx, nextImage.imageId);
 				}
 			}
 		});
