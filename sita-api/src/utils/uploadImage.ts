@@ -6,11 +6,16 @@ interface UploadOptions {
     height?: number;         // ارتفاع الصورة
     quality?: number;        // جودة الصورة 1-100
 }
+
+export interface UploadImageResult {
+    url: string;
+    publicId: string;
+}
+
 export const uploadImage = async (
     buffer: Buffer,
     options: UploadOptions
-): Promise<string> => {
-    // 1. Sharp — Compress + Resize + Convert to WebP
+): Promise<UploadImageResult> => {
     const compressed = await sharp(buffer)
         .resize(options.width || 800, options.height || 800, {
             fit: "inside",        // بيحافظ على الـ aspect ratio
@@ -27,17 +32,19 @@ export const uploadImage = async (
             },
             (error, result) => {
                 if (error) reject(new Error(error.message));
-                else resolve(result!.secure_url);
+                else {
+                    resolve({
+                        url: result!.secure_url,
+                        publicId: result!.public_id,
+                    });
+                }
             }
         ).end(compressed);
     });
 };
-// مسح صورة من Cloudinary
-export const deleteImage = async (imageUrl: string): Promise<void> => {
-    // بنسحب الـ public_id من الـ URL
-    const parts = imageUrl.split("/");
-    const folder = parts[parts.length - 2];
-    const filename = parts[parts.length - 1].split(".")[0];
-    const publicId = `${folder}/${filename}`;
-    await cloudinary.uploader.destroy(publicId);
+export const deleteImage = async (publicId: string): Promise<void> => {
+    const result = await cloudinary.uploader.destroy(publicId);
+    if (result.result !== "ok" && result.result !== "not found") {
+        throw new Error("Cloudinary delete failed");
+    }
 }; 
