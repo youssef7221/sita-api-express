@@ -9,6 +9,7 @@ import governoratesRoutes from "./routes/governoratesRoutes";
 import adminGovernoratesRoutes from "./routes/adminRoutes/adminGovernoratesRoutes";
 import adminSettingsRoutes from "./routes/adminRoutes/adminSettingsRoutes";
 import adminProductImageRoutes from "./routes/adminRoutes/adminProductImageRoutes";
+import adminProductSizeRoutes from "./routes/adminRoutes/adminProductSizeRoutes";
 
 export const ADMIN_BASE_ROUTE = "/api/admin";
 
@@ -25,6 +26,7 @@ app.use("/api/governorates", governoratesRoutes);
 app.use(`${ADMIN_BASE_ROUTE}/governorates`, adminGovernoratesRoutes);
 app.use(`${ADMIN_BASE_ROUTE}/settings`, adminSettingsRoutes);
 app.use(`${ADMIN_BASE_ROUTE}/products`, adminProductImageRoutes);
+app.use(`${ADMIN_BASE_ROUTE}/products`, adminProductSizeRoutes);
 
 app.get("/health", (req, res) => {
   res.json({ status: "OK" });
