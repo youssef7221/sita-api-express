@@ -74,7 +74,7 @@ export const orders = mysqlTable("orders", {
 export const productDiscounts = mysqlTable("product_discounts", {
 	id: bigint({ mode: "number" }).autoincrement().notNull(),
 	// Warning: Can't parse bit(1) from database
-	// bit(1)Type: bit(1)("active").notNull(),
+	active: tinyint("active").notNull().default(1),
 	createdAt: datetime("created_at", { mode: 'string', fsp: 6 }),
 	discountPercentage: decimal("discount_percentage", { precision: 5, scale: 2 }),
 	discountedPrice: decimal("discounted_price", { precision: 10, scale: 2 }),

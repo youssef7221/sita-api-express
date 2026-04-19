@@ -3,4 +3,7 @@ export * as governorateRepository from "./governorateRepository";
 export * as settingsRepository from "./settingsRepository";
 export * as adminRepository from "./adminRepository";
 export * as productImageRepository from "./productImageRepository";
+export * as productRepository from "./productRepository";
+export * as salesRepository from "./salesRepository";
+export * as productDiscountRepository from "./productDiscountRepository";
 export * as productSizeRepository from "./productsSizesRepository";
