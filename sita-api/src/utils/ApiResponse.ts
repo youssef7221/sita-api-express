@@ -3,6 +3,7 @@ export interface MetaData {
   perPage: number;
   total: number;
   totalPages: number;
+  isActive?: boolean;
 }
 
 export class ApiResponse<T> {

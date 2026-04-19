@@ -43,12 +43,12 @@ const ensureNoOverlappingSale = async (startDate: string, endDate: string, exclu
 
 export const getActiveSale = async () => {
     logger.info("Get active sale");
+    const activeSales = await salesRepository.findActiveSales();
 
-    const sales = await salesRepository.findAllSales();
-    const today = new Date().toISOString().slice(0, 10);
-    const activeSale = sales.find((sale) => sale.startDate <= today && sale.endDate >= today);
-
-    return activeSale ? toSaleResponse(activeSale) : null;
+    if (activeSales.length === 0) {
+        return null;
+    }
+    return toSaleResponse(activeSales[0]);
 };
 
 export const getAllSales = async () => {

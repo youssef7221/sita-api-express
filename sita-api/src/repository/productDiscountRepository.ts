@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq , and , gte , lte, sql } from "drizzle-orm";
 import { db } from "../db";
 import { productDiscounts, products } from "../db/drizzle/schema";
 
@@ -73,4 +73,17 @@ export const updateProductDiscountActive = async (id: number, active: number, up
 
 export const deleteProductDiscountById = async (id: number) => {
     return db.delete(productDiscounts).where(eq(productDiscounts.id, id));
+};
+
+export const isHaveActiveDiscount = async (productId: number) => {
+    
+    const rows = await db.select().from(productDiscounts)
+        .where(and(
+            eq(productDiscounts.productId, productId),
+            eq(productDiscounts.active, 1),
+            lte(productDiscounts.startDate, sql`UTC_TIMESTAMP()`),
+            gte(productDiscounts.endDate, sql`UTC_TIMESTAMP()`)
+        ))
+        .limit(1);
+    return rows.length > 0;
 };

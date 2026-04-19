@@ -7,7 +7,8 @@ const logger = createServiceLogger("ProductDiscountService");
 
 const parseDateValue = (value: string): Date | null => {
     const normalized = value.includes("T") ? value : value.replace(" ", "T");
-    const parsed = new Date(normalized);
+    const withTimezone = /(Z|[+-]\d{2}:?\d{2})$/.test(normalized) ? normalized : `${normalized}Z`;
+    const parsed = new Date(withTimezone);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
@@ -23,11 +24,11 @@ const toActiveNumber = (value: boolean | number | undefined) => {
     return Number(value) === 1 ? 1 : 0;
 };
 
-const getNowDateTimeString = () => {
+const getUtcNowDateTimeString = () => {
     return new Date().toISOString().slice(0, 19).replace("T", " ");
 };
 
-const isCurrentlyActive = (active: number | boolean | null, startDate: string, endDate: string) => {
+export const isCurrentlyActive = (active: number | boolean | null, startDate: string, endDate: string) => {
     const isActive = typeof active === "boolean" ? active : Number(active ?? 0) === 1;
     if (!isActive) return false;
 
@@ -40,7 +41,7 @@ const isCurrentlyActive = (active: number | boolean | null, startDate: string, e
     return now >= start && now <= end;
 };
 
-const getFinalPrice = (
+export const getFinalPrice = (
     originalPrice: number,
     discountPercentage: number | null,
     discountedPrice: number | null,
@@ -153,7 +154,7 @@ export const createProductDiscount = async (dto: CreateProductDiscountDto) => {
 
     validateDiscountValues(originalPrice, discountPercentage, discountedPrice);
 
-    const now = getNowDateTimeString();
+    const now = getUtcNowDateTimeString();
 
     const [result] = await productDiscountRepository.insertProductDiscount({
         productId: dto.productId,
@@ -199,7 +200,7 @@ export const updateProductDiscount = async (id: number, dto: UpdateProductDiscou
         startDate: dto.startDate,
         endDate: dto.endDate,
         active: toActiveNumber(dto.active),
-        updatedAt: getNowDateTimeString(),
+        updatedAt: getUtcNowDateTimeString(),
     });
 
     const updated = await productDiscountRepository.findProductDiscountById(id);
@@ -223,7 +224,7 @@ export const toggleProductDiscount = async (id: number) => {
 
     const nextActive = Number(existing.active) === 1 ? 0 : 1;
 
-    await productDiscountRepository.updateProductDiscountActive(id, nextActive, getNowDateTimeString());
+    await productDiscountRepository.updateProductDiscountActive(id, nextActive, getUtcNowDateTimeString());
 
     const updated = await productDiscountRepository.findProductDiscountById(id);
 

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { UnauthorizedError } from "../../../postsapi/src/errors/appErrors";
+import { UnauthorizedError } from "../errors/appErrors";
 
 export interface AuthRequest extends Request {
     user?: any;

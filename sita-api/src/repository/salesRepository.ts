@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq , sql , lte , and , gte} from "drizzle-orm";
 import { db } from "../db";
 import { sales } from "../db/drizzle/schema";
 
@@ -12,6 +12,15 @@ type SaleInsertInput = {
 export const findAllSales = async () => {
     return db.select().from(sales).orderBy(desc(sales.saleId));
 };
+
+export const findActiveSales = async () => {
+  return db.select().from(sales).where(
+    and(
+      lte(sales.startDate, sql`UTC_TIMESTAMP()`),
+      gte(sales.endDate, sql`UTC_TIMESTAMP()`)
+    )
+  );
+}
 
 export const findSaleById = async (id: number) => {
     const rows = await db.select().from(sales).where(eq(sales.saleId, id)).limit(1);

@@ -1,4 +1,4 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { asc, eq, sql , and } from "drizzle-orm";
 import { db } from "../db";
 import { productImages, products } from "../db/drizzle/schema";
 
@@ -70,6 +70,15 @@ export const updateImagePublicIdTx = async (tx: any, imageId: number, publicId: 
 
 export const deleteProductImageTx = async (tx: any, imageId: number) => {
     return tx.delete(productImages).where(eq(productImages.imageId, imageId));
+};
+
+export const findPrimaryImageUrlByProductId = async (productId: number) => {
+    const rows = await db.select()
+        .from(productImages)
+        .where(and(eq(productImages.productId, productId), eq(productImages.isPrimary, 1)))
+        .orderBy(asc(productImages.displayOrder), asc(productImages.imageId))
+        .limit(1);
+    return rows[0].imageUrl ?? null;
 };
 
 export const findNextProductImageForPrimaryTx = async (tx: any, productId: number) => {
