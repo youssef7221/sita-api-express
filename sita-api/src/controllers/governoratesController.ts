@@ -1,6 +1,6 @@
 import * as governRatesService from "../service/governoratesService";
 import { Request, Response, NextFunction } from "express";
-import { ApiResponse } from "../middleware/ApiResponse";
+import { ApiResponse } from "../utils/ApiResponse";
 export const getAllGovernRates = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const result = await governRatesService.getAllGovernorates();

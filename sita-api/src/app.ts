@@ -6,7 +6,15 @@ import adminsRoute from "./routes/adminRoutes/adminRoutes";
 import categoryRoutes from "./routes/categoryRoutes";
 import adminCategoryRoutes from "./routes/adminRoutes/adminCategoryRoutes";
 import governoratesRoutes from "./routes/governoratesRoutes";
+import salesRoutes from "./routes/salesRoutes";
+import productsRoutes from "./routes/productsRoutes";
 import adminGovernoratesRoutes from "./routes/adminRoutes/adminGovernoratesRoutes";
+import adminSettingsRoutes from "./routes/adminRoutes/adminSettingsRoutes";
+import adminProductImageRoutes from "./routes/adminRoutes/adminProductImageRoutes";
+import adminProductSizeRoutes from "./routes/adminRoutes/adminProductSizeRoutes";
+import adminSalesRoutes from "./routes/adminRoutes/adminSalesRoutes";
+import adminProductDiscountRoutes from "./routes/adminRoutes/adminProductDiscountRoutes";
+import adminProductsRoutes from "./routes/adminRoutes/adminProductsRoutes";
 
 export const ADMIN_BASE_ROUTE = "/api/admin";
 
@@ -20,7 +28,15 @@ app.use(ADMIN_BASE_ROUTE, adminsRoute);
 app.use(`${ADMIN_BASE_ROUTE}/categories`, adminCategoryRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/governorates", governoratesRoutes);
+app.use("/api/sales", salesRoutes);
+app.use("/api/products", productsRoutes);
 app.use(`${ADMIN_BASE_ROUTE}/governorates`, adminGovernoratesRoutes);
+app.use(`${ADMIN_BASE_ROUTE}/settings`, adminSettingsRoutes);
+app.use(`${ADMIN_BASE_ROUTE}/products`, adminProductImageRoutes);
+app.use(`${ADMIN_BASE_ROUTE}/products`, adminProductSizeRoutes);
+app.use(`${ADMIN_BASE_ROUTE}/products`, adminProductsRoutes);
+app.use(`${ADMIN_BASE_ROUTE}/sales`, adminSalesRoutes);
+app.use(ADMIN_BASE_ROUTE, adminProductDiscountRoutes);
 
 app.get("/health", (req, res) => {
   res.json({ status: "OK" });

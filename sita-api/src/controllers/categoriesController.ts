@@ -1,6 +1,6 @@
 import * as categoriesService from '../service/categoriesService';
 import { Request, Response, NextFunction } from 'express';
-import { ApiResponse } from '../middleware/ApiResponse';
+import { ApiResponse } from '../utils/ApiResponse';
 import { getPagination } from '../utils/paginations';
 
 export const getAllCategories = async (req: Request, res: Response, next: NextFunction) => {

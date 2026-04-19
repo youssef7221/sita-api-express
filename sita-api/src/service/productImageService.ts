@@ -1,0 +1,225 @@
+import { db } from "../db";
+import { ProductImageResponseDto, UploadProductImagesDto } from "../dtos/product/productImageDto";
+import { BadRequestError, InternalServerError, NotFoundError } from "../errors/appErrors";
+import { productImageRepository } from "../repository";
+import { createServiceLogger } from "../utils/serviceLogger";
+import { deleteImage, uploadImage } from "../utils/uploadImage";
+
+const logger = createServiceLogger("ProductImageService");
+
+const validatePositiveInt = (value: number, fieldName: string) => {
+	if (!Number.isInteger(value) || value <= 0) {
+		throw new BadRequestError(`${fieldName} must be a valid positive integer`);
+	}
+};
+
+const parsePublicIdFromUrl = (url: string): string | null => {
+	try {
+		const parsedUrl = new URL(url);
+		const pathParts = parsedUrl.pathname.split("/").filter(Boolean);
+		const uploadIndex = pathParts.findIndex((part) => part === "upload");
+
+		if (uploadIndex === -1) return null;
+
+		const afterUpload = pathParts.slice(uploadIndex + 1);
+		const withoutVersion = afterUpload[0]?.startsWith("v") ? afterUpload.slice(1) : afterUpload;
+
+		if (withoutVersion.length === 0) return null;
+
+		const lastPart = withoutVersion[withoutVersion.length - 1];
+		withoutVersion[withoutVersion.length - 1] = lastPart.replace(/\.[^.]+$/, "");
+
+		return withoutVersion.join("/");
+	} catch {
+		return null;
+	}
+};
+
+const ensureProductExists = async (productId: number) => {
+	const product = await productImageRepository.findProductById(productId);
+
+	if (!product) {
+		throw new NotFoundError("Product not found");
+	}
+};
+
+export const uploadProductImages = async (
+	productId: number,
+	files: Express.Multer.File[],
+	dto: UploadProductImagesDto
+): Promise<ProductImageResponseDto[]> => {
+	logger.info("Upload product images started", {
+		productId,
+		filesCount: files?.length ?? 0,
+		primaryIndex: dto?.primaryIndex,
+	});
+
+	validatePositiveInt(productId, "productId");
+
+	if (!files || files.length === 0) {
+		throw new BadRequestError("At least one image is required");
+	}
+
+	await ensureProductExists(productId);
+
+	const existingImages = await productImageRepository.findImagesByProductId(productId);
+
+	const hasPrimaryImage = existingImages.some((image) => Number(image.isPrimary) === 1);
+	const primaryIndex = dto.primaryIndex;
+
+	if (!hasPrimaryImage && primaryIndex === undefined) {
+		throw new BadRequestError("Primary image is required");
+	}
+
+	if (primaryIndex !== undefined && (primaryIndex < 0 || primaryIndex >= files.length)) {
+		throw new BadRequestError("Invalid primaryIndex");
+	}
+
+	const maxDisplayOrder = existingImages.reduce((max, image) => {
+		const currentOrder = Number(image.displayOrder ?? 0);
+		return currentOrder > max ? currentOrder : max;
+	}, 0);
+
+	let uploadedImages: { url: string; publicId: string }[];
+
+	try {
+		uploadedImages = await Promise.all(
+			files.map((file) =>
+				uploadImage(file.buffer, {
+					folder: "Products",
+				})
+			)
+		);
+	} catch (error) {
+		logger.error("Cloudinary upload failed", error, { productId, filesCount: files.length });
+		throw new InternalServerError("Failed to upload images to Cloudinary");
+	}
+
+	try {
+		const createdImages = await db.transaction(async (tx) => {
+			if (primaryIndex !== undefined) {
+				await productImageRepository.clearPrimaryByProductIdTx(tx, productId);
+			}
+
+			const createdImages: ProductImageResponseDto[] = [];
+
+			for (let index = 0; index < uploadedImages.length; index++) {
+				const uploaded = uploadedImages[index];
+				const isPrimary = primaryIndex !== undefined ? index === primaryIndex : false;
+				const displayOrder = maxDisplayOrder + index + 1;
+
+				const [insertResult] = await productImageRepository.insertProductImageTx(tx, {
+					productId,
+					imageUrl: uploaded.url,
+					isPrimary: isPrimary ? 1 : 0,
+					displayOrder,
+				});
+
+				const imageId = Number(insertResult.insertId);
+
+				if (!Number.isInteger(imageId) || imageId <= 0) {
+					throw new InternalServerError("Failed to save image record");
+				}
+
+				await productImageRepository.updateImagePublicIdTx(tx, imageId, uploaded.publicId);
+
+				createdImages.push({
+					imageId,
+					productId,
+					url: uploaded.url,
+					public_id: uploaded.publicId,
+					isPrimary,
+					displayOrder,
+				});
+			}
+
+			return createdImages;
+		});
+
+		logger.info("Upload product images completed", {
+			productId,
+			createdCount: createdImages.length,
+			imageIds: createdImages.map((image) => image.imageId),
+		});
+
+		return createdImages;
+	} catch (error) {
+		logger.error("Saving uploaded images failed", error, {
+			productId,
+			uploadedCount: uploadedImages.length,
+		});
+
+		const rollbackResults = await Promise.allSettled(uploadedImages.map((image) => deleteImage(image.publicId)));
+		const rollbackFailures = rollbackResults.filter((result) => result.status === "rejected").length;
+
+		if (rollbackFailures > 0) {
+			logger.warn("Cloudinary rollback had failures", {
+				productId,
+				rollbackFailures,
+				totalRollbackAttempts: rollbackResults.length,
+			});
+		}
+
+		throw new InternalServerError("Failed to save product images");
+	}
+};
+
+export const deleteProductImage = async (productId: number, imageId: number) => {
+	logger.info("Delete product image started", { productId, imageId });
+
+	validatePositiveInt(productId, "productId");
+	validatePositiveInt(imageId, "imageId");
+
+	const image = await productImageRepository.findImageById(imageId);
+
+	if (!image) {
+		throw new NotFoundError("Product image not found");
+	}
+
+	if (image.productId !== productId) {
+		throw new NotFoundError("Product image not found for this product");
+	}
+
+	const publicId = (await productImageRepository.getProductImagePublicId(imageId)) ?? parsePublicIdFromUrl(image.imageUrl);
+
+	if (!publicId) {
+		logger.error("Delete product image failed: missing public_id", new Error("Image public_id is missing"), {
+			productId,
+			imageId,
+		});
+		throw new InternalServerError("Image public_id is missing");
+	}
+
+	try {
+		await deleteImage(publicId);
+	} catch (error) {
+		logger.error("Cloudinary delete failed", error, { productId, imageId, publicId });
+		throw new InternalServerError("Failed to delete image from Cloudinary");
+	}
+
+	try {
+		let reassignedPrimaryImageId: number | null = null;
+
+		await db.transaction(async (tx) => {
+			await productImageRepository.deleteProductImageTx(tx, imageId);
+
+			if (Number(image.isPrimary) === 1) {
+				const nextImage = await productImageRepository.findNextProductImageForPrimaryTx(tx, image.productId);
+
+				if (nextImage) {
+					reassignedPrimaryImageId = nextImage.imageId;
+					await productImageRepository.markImageAsPrimaryTx(tx, nextImage.imageId);
+				}
+			}
+		});
+
+		return {
+			deletedImageId: imageId,
+			reassignedPrimaryImageId,
+		};
+	} catch (error) {
+		logger.error("Delete product image transaction failed", error, { productId, imageId });
+		throw new InternalServerError("Failed to delete product image");
+	}
+};
+
