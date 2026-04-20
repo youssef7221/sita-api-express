@@ -7,3 +7,4 @@ export * as productRepository from "./productRepository";
 export * as salesRepository from "./salesRepository";
 export * as productDiscountRepository from "./productDiscountRepository";
 export * as productSizeRepository from "./productsSizesRepository";
+export * as ordersRepository from "./ordersRepository";

@@ -15,7 +15,8 @@ import adminProductSizeRoutes from "./routes/adminRoutes/adminProductSizeRoutes"
 import adminSalesRoutes from "./routes/adminRoutes/adminSalesRoutes";
 import adminProductDiscountRoutes from "./routes/adminRoutes/adminProductDiscountRoutes";
 import adminProductsRoutes from "./routes/adminRoutes/adminProductsRoutes";
-
+import adminOrderRoutes from "./routes/adminRoutes/adminOrderRoutes";
+import orderRoutes from "./routes/ordersRoutes";
 export const ADMIN_BASE_ROUTE = "/api/admin";
 
 const app = express();
@@ -36,7 +37,9 @@ app.use(`${ADMIN_BASE_ROUTE}/products`, adminProductImageRoutes);
 app.use(`${ADMIN_BASE_ROUTE}/products`, adminProductSizeRoutes);
 app.use(`${ADMIN_BASE_ROUTE}/products`, adminProductsRoutes);
 app.use(`${ADMIN_BASE_ROUTE}/sales`, adminSalesRoutes);
-app.use(ADMIN_BASE_ROUTE, adminProductDiscountRoutes);
+app.use(`${ADMIN_BASE_ROUTE}/products`, adminProductDiscountRoutes);
+app.use(`${ADMIN_BASE_ROUTE}/orders`, adminOrderRoutes);
+app.use("/api/orders", orderRoutes);
 
 app.get("/health", (req, res) => {
   res.json({ status: "OK" });

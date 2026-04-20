@@ -59,6 +59,27 @@ export const findProductDiscountsByProductId = async (productId: number) => {
         .orderBy(desc(productDiscounts.startDate));
 };
 
+export const findActiveProductDiscountByProductId = async (productId: number) => {
+    const rows = await db
+        .select({
+            discountPercentage: productDiscounts.discountPercentage,
+            discountedPrice: productDiscounts.discountedPrice,
+        })
+        .from(productDiscounts)
+        .where(
+            and(
+                eq(productDiscounts.productId, productId),
+                eq(productDiscounts.active, 1),
+                lte(productDiscounts.startDate, sql`UTC_TIMESTAMP()`),
+                gte(productDiscounts.endDate, sql`UTC_TIMESTAMP()`)
+            )
+        )
+        .orderBy(desc(productDiscounts.startDate))
+        .limit(1);
+
+    return rows[0];
+};
+
 export const insertProductDiscount = async (input: ProductDiscountInsertInput) => {
     return db.insert(productDiscounts).values(input);
 };
