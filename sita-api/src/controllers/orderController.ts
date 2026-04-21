@@ -1,4 +1,3 @@
-import * as ordersService from "../service/orderService";
 import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "../utils/ApiResponse";
 import { getPagination } from "../utils/paginations";
