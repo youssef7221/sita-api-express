@@ -1,7 +1,7 @@
 import { CreateCategoryDto, UpdateCategoryDto } from "../dtos/category/categoryDto";
 import { NotFoundError, ExistsAlready } from "../errors/appErrors";
 import { createServiceLogger } from "../utils/serviceLogger";
-import { categoryRepository } from "../repository";
+import {categoryRepository} from "../repository";
 
 const logger = createServiceLogger("CategoriesService");
 

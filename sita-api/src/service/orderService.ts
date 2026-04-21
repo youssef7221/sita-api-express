@@ -8,8 +8,8 @@ import {
     productRepository,
     productSizeRepository,
 } from "../repository";
-import { getFinalPrice } from "./productDiscountService";
-import { getActiveSale } from "./salesService";
+import { getFinalPrice } from "../service/productDiscountService";
+import { getActiveSale } from "../service/salesService";
 import { createServiceLogger } from "../utils/serviceLogger";
 import { deleteImage, uploadImage } from "../utils/uploadImage";
 

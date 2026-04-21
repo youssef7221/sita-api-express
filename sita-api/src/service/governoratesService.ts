@@ -1,7 +1,6 @@
 import { NotFoundError } from "../errors/appErrors";
 import { createServiceLogger } from "../utils/serviceLogger";
-import { governorateRepository } from "../repository";
-
+import {governorateRepository} from "../repository";
 const logger = createServiceLogger("GovernoratesService");
 
 export const getAllGovernorates = async () => {
