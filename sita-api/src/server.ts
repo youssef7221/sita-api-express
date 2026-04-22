@@ -18,7 +18,7 @@ const startServer = async () => {
     });
   } catch (error) {
     console.error("❌ Database connection failed:", error);
-    process.exit(1); // وقّف السيرفر لو الـ DB مش شغالة
+    process.exit(1); 
   }
 };
 

@@ -1,4 +1,4 @@
-import * as adminSevice from '../service/adminsService';
+import * as adminSevice  from '../service/adminsService';
 import { Request, Response } from 'express';
 import { ApiResponse } from '../utils/ApiResponse';
 import { NextFunction } from 'express';

@@ -4,8 +4,7 @@ import { ExistsAlready, NotFoundError, UnauthorizedError } from "../errors/appEr
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { createServiceLogger } from "../utils/serviceLogger";
-import { adminRepository } from "../repository";
-
+import {adminRepository} from "../repository";
 dotenv.config();
 
 const logger = createServiceLogger("AdminsService");
