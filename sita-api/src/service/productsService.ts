@@ -136,12 +136,13 @@ export const getProductById = async (id: number) => {
         activeSaleDiscountPercent,
     });
 
-    const imagesMap = new Map<number, { imageUrl: string; isPrimary: boolean; displayOrder: number | null }>();
+    const imagesMap = new Map<number, { id: number; imageUrl: string; isPrimary: boolean; displayOrder: number | null }>();
     const sizesMap = new Map<number, { id: number; sizeName: string; stockQty: number }>();
 
     for (const row of rows) {
         if (row.imageId !== null && row.imageUrl !== null && !imagesMap.has(row.imageId)) {
             imagesMap.set(row.imageId, {
+                id: row.imageId,
                 imageUrl: row.imageUrl,
                 isPrimary: Number(row.imageIsPrimary) === 1,
                 displayOrder: row.imageDisplayOrder,

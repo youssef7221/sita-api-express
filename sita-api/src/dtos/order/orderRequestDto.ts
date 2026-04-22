@@ -6,6 +6,15 @@ export const CreateOrderItemSchema = z.object({
 	quantity: z.coerce.number().int().positive("quantity must be a positive integer"),
 });
 
+export const CreateCheckoutItemSchema = z.object({
+	productId: z.coerce.number().int().positive("productId must be a positive integer"),
+	sizeId: z
+		.union([z.coerce.number().int().positive("sizeId must be a positive integer"), z.null()])
+		.optional()
+		.transform((value) => value ?? null),
+	quantity: z.coerce.number().int().positive("quantity must be a positive integer"),
+});
+
 export const CreateOrderSchema = z.object({
 	customerFirstName: z.string().min(1, "customerFirstName is required").max(100),
 	customerLastName: z.string().min(1, "customerLastName is required").max(100),
@@ -19,7 +28,7 @@ export const CreateOrderSchema = z.object({
 
 export const CreateCheckoutOrderSchema = z.object({
     governorateId: z.coerce.number().int().positive("governorateId must be a positive integer"),
-    items: z.array(CreateOrderItemSchema).min(1, "At least one item is required"),
+	items: z.array(CreateCheckoutItemSchema).min(1, "At least one item is required"),
 });
 
 export type CreateOrderDto = z.infer<typeof CreateOrderSchema>;

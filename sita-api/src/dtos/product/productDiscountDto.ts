@@ -6,7 +6,7 @@ const DateTimeSchema = z.string().min(1, "Date is required").refine((value) => {
 }, { message: "Invalid datetime format" });
 
 const discountValidation = {
-    message: "At least one of discountPercentage or discountedPrice must be provided",
+    message: "Provide exactly one of discountPercentage or discountedPrice",
     path: ["discountPercentage"],
 };
 
@@ -25,7 +25,10 @@ const ProductDiscountBaseSchema = z.object({
 });
 
 export const CreateProductDiscountSchema = ProductDiscountBaseSchema
-    .refine((data) => data.discountPercentage !== undefined || data.discountedPrice !== undefined, discountValidation)
+    .refine(
+        (data) => (data.discountPercentage !== undefined) !== (data.discountedPrice !== undefined),
+        discountValidation
+    )
     .refine((data) => {
         const start = new Date(data.startDate.includes("T") ? data.startDate : data.startDate.replace(" ", "T"));
         const end = new Date(data.endDate.includes("T") ? data.endDate : data.endDate.replace(" ", "T"));
@@ -33,7 +36,10 @@ export const CreateProductDiscountSchema = ProductDiscountBaseSchema
     }, dateRangeValidation);
 
 export const UpdateProductDiscountSchema = ProductDiscountBaseSchema
-    .refine((data) => data.discountPercentage !== undefined || data.discountedPrice !== undefined, discountValidation)
+    .refine(
+        (data) => (data.discountPercentage !== undefined) !== (data.discountedPrice !== undefined),
+        discountValidation
+    )
     .refine((data) => {
         const start = new Date(data.startDate.includes("T") ? data.startDate : data.startDate.replace(" ", "T"));
         const end = new Date(data.endDate.includes("T") ? data.endDate : data.endDate.replace(" ", "T"));

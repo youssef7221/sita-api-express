@@ -13,10 +13,11 @@ export const loginAdmin = async (dto : LoginDto) => {
     logger.info("Admin login started", { username: dto.username });
 
     const admin = await adminRepository.findAdminByUsername(dto.username);
-    if (!admin) {
-        logger.warn("Admin login failed: username not found", { username: dto.username });
+    const isPasswordValid = admin ? await bcrypt.compare(dto.password, admin.passwordHash) : false;
+    if (!admin || !isPasswordValid) {
+        logger.warn("Admin login failed: invalid username or password", { username: dto.username });
         throw new UnauthorizedError("Invalid username or password");
-    };
+    }
     const token = jwt.sign(
         { adminId: admin.adminId }, 
         process.env.JWT_SECRET as string,
