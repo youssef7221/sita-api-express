@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { CreateOrderDto, OrderResponseDto } from "../dtos/order/orderRequestDto";
+import { CreateOrderDto, OrderResponseDto , CreateCheckoutDto , CheckoutResponseDto} from "../dtos/order/orderRequestDto";
 import { BadRequestError, InternalServerError, NotFoundError } from "../errors/appErrors";
 import {
     governorateRepository,
@@ -7,6 +7,7 @@ import {
     productDiscountRepository,
     productRepository,
     productSizeRepository,
+    settingsRepository
 } from "../repository";
 import { getFinalPrice } from "../service/productDiscountService";
 import { getActiveSale } from "../service/salesService";
@@ -81,6 +82,88 @@ const mapOrderRowsToResponse = (rows: Awaited<ReturnType<typeof ordersRepository
     };
 };
 
+type PricedItem = {
+    productId: number;
+    productName: string;
+    sizeId: number | null;
+    sizeName: string | null;
+    quantity: number;
+    unitPrice: number;      // original
+    finalUnitPrice: number; // after discount
+    oldPrice: number | null;
+};
+
+type CheckoutItemInput = {
+    productId: number;
+    sizeId: number | null;
+    quantity: number;
+};
+
+export const resolveItemPricing = async (
+    items: CheckoutItemInput[],
+    activeSaleDiscountPercent: number | null
+): Promise<PricedItem[]> => {
+    const pricedItems: PricedItem[] = [];
+
+    for (const item of items) {
+        const product = await productRepository.findProductById(item.productId);
+        if (!product) throw new NotFoundError(`Product not found: ${item.productId}`);
+
+        if (Number(product.isActive ?? 0) !== 1) {
+            throw new BadRequestError(`Product is inactive: ${item.productId}`);
+        }
+
+        let size = null;
+        if (item.sizeId !== null) {
+            size = await productSizeRepository.findProductSizeByIdAndProductId(item.sizeId, item.productId);
+            if (!size) throw new NotFoundError(`Size not found for product ${item.productId}`);
+
+            const stockQty = Number(size.stockQty ?? 0);
+            if (stockQty < item.quantity) {
+                throw new BadRequestError(
+                    `Insufficient stock for product ${item.productId} size ${size.sizeName}`
+                );
+            }
+        }
+
+        const originalPrice = Number(product.price);
+        const activeProductDiscount = await productDiscountRepository.findActiveProductDiscountByProductId(item.productId);
+
+        const discountPercentage =
+            activeProductDiscount?.discountPercentage != null
+                ? Number(activeProductDiscount.discountPercentage)
+                : null;
+
+        const discountedPrice =
+            activeProductDiscount?.discountedPrice != null
+                ? Number(activeProductDiscount.discountedPrice)
+                : null;
+
+        let finalUnitPrice = originalPrice;
+
+        if (discountPercentage !== null || discountedPrice !== null) {
+            finalUnitPrice = getFinalPrice(originalPrice, discountPercentage, discountedPrice, true);
+        } else if (activeSaleDiscountPercent !== null) {
+            finalUnitPrice = toFixedNumber(
+                originalPrice - (originalPrice * activeSaleDiscountPercent) / 100
+            );
+        }
+
+        pricedItems.push({
+            productId: item.productId,
+            productName: product.name,
+            sizeId: item.sizeId,
+            sizeName: size?.sizeName ?? null,
+            quantity: item.quantity,
+            unitPrice: originalPrice,
+            finalUnitPrice,
+            oldPrice: finalUnitPrice < originalPrice ? originalPrice : null,
+        });
+    }
+
+    return pricedItems;
+};
+
 export const getAllOrders = async (limit: number = 10, offset: number = 0) => {
     logger.info("Get all orders");
     const data = await ordersRepository.findAllOrders(limit, offset);
@@ -116,75 +199,21 @@ export const createOrder = async (dto: CreateOrderDto, screenshot: Express.Multe
     if (!governorate) {
         throw new NotFoundError("Governorate not found");
     }
-
+        const freeDelivery = await settingsRepository.findSettingByKey("FREE_DELIVERY_ENABLED");
     const activeSale = await getActiveSale();
     const activeSaleDiscountPercent = activeSale?.discountPercent ?? null;
 
-    const pricedItems: Array<{
-        productId: number;
-        productName: string;
-        sizeId: number;
-        sizeName: string;
-        quantity: number;
-        unitPrice: number;
-        oldPrice: number | null;
-    }> = [];
-
-    for (const item of dto.items) {
-        const product = await productRepository.findProductById(item.productId);
-        if (!product) {
-            throw new NotFoundError(`Product not found: ${item.productId}`);
-        }
-
-        if (Number(product.isActive ?? 0) !== 1) {
-            throw new BadRequestError(`Product is inactive: ${item.productId}`);
-        }
-
-        const size = await productSizeRepository.findProductSizeByIdAndProductId(item.sizeId, item.productId);
-        if (!size) {
-            throw new NotFoundError(`Size not found for product ${item.productId}`);
-        }
-
-        const stockQty = Number(size.stockQty ?? 0);
-        if (stockQty < item.quantity) {
-            throw new BadRequestError(`Insufficient stock for product ${item.productId} size ${size.sizeName}`);
-        }
-
-        const originalPrice = Number(product.price);
-        const activeProductDiscount = await productDiscountRepository.findActiveProductDiscountByProductId(item.productId);
-        const discountPercentage = activeProductDiscount?.discountPercentage !== null && activeProductDiscount?.discountPercentage !== undefined
-            ? Number(activeProductDiscount.discountPercentage)
-            : null;
-        const discountedPrice = activeProductDiscount?.discountedPrice !== null && activeProductDiscount?.discountedPrice !== undefined
-            ? Number(activeProductDiscount.discountedPrice)
-            : null;
-
-        let unitPrice = originalPrice;
-
-        if (discountPercentage !== null || discountedPrice !== null) {
-            unitPrice = getFinalPrice(originalPrice, discountPercentage, discountedPrice, true);
-        } else if (activeSaleDiscountPercent !== null) {
-            unitPrice = toFixedNumber(originalPrice - (originalPrice * activeSaleDiscountPercent) / 100);
-        }
-
-        const oldPrice = unitPrice < originalPrice ? originalPrice : null;
-
-        pricedItems.push({
-            productId: item.productId,
-            productName: product.name,
-            sizeId: item.sizeId,
-            sizeName: size.sizeName,
-            quantity: item.quantity,
-            unitPrice,
-            oldPrice,
-        });
-    }
+    const pricedItems = await resolveItemPricing(dto.items, activeSaleDiscountPercent);
 
     const subtotal = toFixedNumber(
-        pricedItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
+        pricedItems.reduce((sum, item) => sum + item.finalUnitPrice * item.quantity, 0)
     );
-    const shippingFee = Number(governorate.shippingFee);
-    const total = toFixedNumber(subtotal + shippingFee);
+    let shippingFee = Number(governorate.shippingFee);
+    const freeDeliveryEnabled = freeDelivery.settingValue === "true";
+    if (freeDeliveryEnabled) {
+        shippingFee = 0;
+    }
+    const totalAmount = toFixedNumber(subtotal + shippingFee);
     const orderRef = await generateUniqueOrderRef();
 
     const uploadedScreenshot = await uploadImage(screenshot.buffer, { folder: "orders" });
@@ -202,7 +231,7 @@ export const createOrder = async (dto: CreateOrderDto, screenshot: Express.Multe
                 address: dto.address,
                 subtotal: subtotal.toFixed(2),
                 shippingFee: shippingFee.toFixed(2),
-                total: total.toFixed(2),
+                total: totalAmount.toFixed(2),
                 paymentMethod: dto.paymentMethod,
                 paymentType: dto.paymentType,
                 screenshotUrl: uploadedScreenshot.url,
@@ -211,6 +240,10 @@ export const createOrder = async (dto: CreateOrderDto, screenshot: Express.Multe
             const orderId = Number(insertOrderResult.insertId);
 
             for (const item of pricedItems) {
+                if (item.sizeId === null || item.sizeName === null) {
+                    throw new BadRequestError(`sizeId is required for product ${item.productId}`);
+                }
+
                 const updateResult = await ordersRepository.decrementProductSizeStockTx(tx, item.sizeId, item.productId, item.quantity);
                 const affectedRows = Number((updateResult as any)?.affectedRows ?? (Array.isArray(updateResult) ? (updateResult as any)[0]?.affectedRows : 0));
 
@@ -223,7 +256,7 @@ export const createOrder = async (dto: CreateOrderDto, screenshot: Express.Multe
                     productId: item.productId,
                     size: item.sizeName,
                     quantity: item.quantity,
-                    unitPrice: item.unitPrice.toFixed(2),
+                    unitPrice: item.finalUnitPrice.toFixed(2),
                     oldPrice: item.oldPrice !== null ? item.oldPrice.toFixed(2) : null,
                 });
             }
@@ -257,5 +290,45 @@ export const createOrder = async (dto: CreateOrderDto, screenshot: Express.Multe
         total: mapped.total,
         createdAt: mapped.createdAt,
         items: mapped.items,
+    };
+};
+
+
+export const checkout = async (dto: CreateCheckoutDto): Promise<CheckoutResponseDto> => {
+    const governorate = await governorateRepository.findGovernorateById(dto.governorateId);
+    const freeDelivery = await settingsRepository.findSettingByKey("FREE_DELIVERY_ENABLED");
+    if (!governorate) throw new NotFoundError("Governorate not found");
+
+    const activeSale = await getActiveSale();
+    const activeSaleDiscountPercent = activeSale?.discountPercent ?? null;
+
+    const pricedItems = await resolveItemPricing(dto.items, activeSaleDiscountPercent);
+
+    const subtotal = toFixedNumber(
+        pricedItems.reduce((sum, item) => sum + item.finalUnitPrice * item.quantity, 0)
+    );
+    let shippingFee = Number(governorate.shippingFee);
+    const freeDeliveryEnabled = freeDelivery.settingValue === "true";
+    if (freeDeliveryEnabled) {
+        shippingFee = 0;
+    }
+    const totalAmount = toFixedNumber(subtotal + shippingFee);
+
+    return {
+        subtotal,
+        shippingFee,
+        totalAmount,
+        freeDelivery: freeDeliveryEnabled,
+        items: pricedItems.map((item) => ({
+            productId: item.productId,
+            productName: item.productName,
+            sizeId: item.sizeId,
+            sizeName: item.sizeName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            finalUnitPrice: item.finalUnitPrice,
+            discountApplied: item.finalUnitPrice < item.unitPrice,
+            lineTotal: toFixedNumber(item.finalUnitPrice * item.quantity),
+        })),
     };
 };

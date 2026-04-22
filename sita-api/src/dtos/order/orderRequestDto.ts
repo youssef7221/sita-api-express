@@ -17,8 +17,14 @@ export const CreateOrderSchema = z.object({
 	items: z.array(CreateOrderItemSchema).min(1, "At least one item is required"),
 });
 
+export const CreateCheckoutOrderSchema = z.object({
+    governorateId: z.coerce.number().int().positive("governorateId must be a positive integer"),
+    items: z.array(CreateOrderItemSchema).min(1, "At least one item is required"),
+});
+
 export type CreateOrderDto = z.infer<typeof CreateOrderSchema>;
 export type CreateOrderItemDto = z.infer<typeof CreateOrderItemSchema>;
+export type CreateCheckoutDto = z.infer<typeof CreateCheckoutOrderSchema>;
 
 type FormDataValue = string | string[] | undefined;
 
@@ -92,3 +98,22 @@ export type OrderResponseDto = {
 	createdAt: string | null;
 };
     
+export type CheckoutItemDto = {
+    productId: number;
+    productName: string;
+    sizeId: number | null;
+    sizeName: string | null;
+    quantity: number;
+    unitPrice: number;      
+    finalUnitPrice: number;   
+    discountApplied: boolean;
+    lineTotal: number;
+};
+
+export type CheckoutResponseDto = {
+    subtotal: number;
+    shippingFee: number;
+    totalAmount: number;
+    freeDelivery: boolean;
+    items: CheckoutItemDto[];
+};

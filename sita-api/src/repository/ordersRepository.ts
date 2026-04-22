@@ -26,6 +26,7 @@ type CreateOrderItemInsertInput = {
     oldPrice: string | null;
 };
 
+
 export const findAllOrders = async (limit: number , offset: number) => {
     return db.select().from(orders).limit(limit).offset(offset);
 }
@@ -96,3 +97,4 @@ export const decrementProductSizeStockTx = async (tx: any, sizeId: number, produ
             )
         );
 };
+

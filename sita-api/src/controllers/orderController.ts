@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import * as ordersService from "../service/orderService";
 import { ApiResponse } from "../utils/ApiResponse";
 import { getPagination } from "../utils/paginations";
-import { CreateOrderSchema, normalizeCreateOrderFormData } from "../dtos/order/orderRequestDto";
+import { CreateCheckoutOrderSchema, CreateOrderSchema, normalizeCreateOrderFormData } from "../dtos/order/orderRequestDto";
 import { BadRequestError, ValidationError } from "../errors/appErrors";
 export const getAllOrders = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -45,4 +45,20 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
     } catch (error) {
         next(error);
     }
+};
+
+export const checkStockAndGetOrderDetails = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const requestData = req.body;
+        const validationResult = CreateCheckoutOrderSchema.safeParse(requestData);
+        if (!validationResult.success) {
+            const message = validationResult.error.issues.map((issue) => issue.message).join(", ");
+            throw new ValidationError(message);
+        }
+        const dto = validationResult.data;
+        const orderDetails = await ordersService.checkout(dto);
+        res.json(ApiResponse.success(orderDetails));
+    } catch (error) {
+        next(error);
+    }   
 };
