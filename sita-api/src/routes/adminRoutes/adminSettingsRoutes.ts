@@ -8,7 +8,6 @@ const router = Router();
 
 router.use(authMiddleware);
 
-router.get("/:key", settingsController.getSettingByKey);
 router.put("/:key", validate(UpdateSettingSchema), settingsController.updateSetting);
 
 export default router;

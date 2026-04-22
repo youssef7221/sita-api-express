@@ -97,7 +97,11 @@ const toDiscountResponse = (row: {
 
 const validateDiscountValues = (originalPrice: number, discountPercentage: number | null, discountedPrice: number | null) => {
     if (discountPercentage === null && discountedPrice === null) {
-        throw new BadRequestError("At least one of discountPercentage or discountedPrice must be provided");
+        throw new BadRequestError("Either discountPercentage or discountedPrice must be provided");
+    }
+
+    if (discountPercentage !== null && discountedPrice !== null) {
+        throw new BadRequestError("Provide only one of discountPercentage or discountedPrice");
     }
 
     if (discountedPrice !== null && discountedPrice > originalPrice) {
