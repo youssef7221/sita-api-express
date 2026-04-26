@@ -30,6 +30,7 @@ export const createSizeChart = async (dto: CreateSizeChartDto, file: Express.Mul
 
     const chartUrl = await uploadImage(file.buffer, {
         folder: "size-charts",
+        quality : 100
     });
     
     const sizeChart = await sizeChartRepository.createSizeChart(dto.productId, chartUrl.url);
@@ -57,6 +58,7 @@ export const updateSizeChart = async (dto: CreateSizeChartDto, file: Express.Mul
 
     const chartUrl = await uploadImage(file.buffer, {
         folder: "size-charts",
+                quality : 100
     });
 
     await deleteImage(existingChart.chartUrl);
