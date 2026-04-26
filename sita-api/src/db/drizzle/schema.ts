@@ -162,3 +162,15 @@ export const settings = mysqlTable("settings", {
 (table) => [
 	primaryKey({ columns: [table.id], name: "settings_id"}),
 ]);
+
+export const sizeChart = mysqlTable("sizeChart", {
+  id: int("id").autoincrement().primaryKey(),
+
+  productId: int("product_id")
+    .notNull()
+   .references(() => products.productId, {
+  onDelete: "cascade",
+}),
+
+  chartUrl: varchar("chart_url", { length: 500 }).notNull(),
+});
