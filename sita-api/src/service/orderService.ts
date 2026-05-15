@@ -184,14 +184,15 @@ export const getOrderById = async (id: number) => {
     return mapOrderRowsToResponse(rows);
 };
 
-export const createOrder = async (dto: CreateOrderDto, screenshot: Express.Multer.File): Promise<OrderResponseDto> => {
+export const createOrder = async (dto: CreateOrderDto, screenshot?: Express.Multer.File): Promise<OrderResponseDto> => {
     logger.info("Create order started", {
         customerPhone: dto.customerPhone,
         governorateId: dto.governorateId,
         itemsCount: dto.items.length,
     });
 
-    if (!screenshot) {
+    const isCashOnDelivery = dto.paymentType?.toLowerCase() === "cash on delivery";
+    if (!isCashOnDelivery && !screenshot) {
         throw new BadRequestError("screenshot is required");
     }
 
@@ -216,7 +217,9 @@ export const createOrder = async (dto: CreateOrderDto, screenshot: Express.Multe
     const totalAmount = toFixedNumber(subtotal + shippingFee);
     const orderRef = await generateUniqueOrderRef();
 
-    const uploadedScreenshot = await uploadImage(screenshot.buffer, { folder: "orders" });
+    const uploadedScreenshot = screenshot
+        ? await uploadImage(screenshot.buffer, { folder: "orders" })
+        : null;
 
     let createdOrderId = 0;
 
@@ -234,7 +237,7 @@ export const createOrder = async (dto: CreateOrderDto, screenshot: Express.Multe
                 total: totalAmount.toFixed(2),
                 paymentMethod: dto.paymentMethod,
                 paymentType: dto.paymentType,
-                screenshotUrl: uploadedScreenshot.url,
+                screenshotUrl: uploadedScreenshot?.url ?? null,
             });
 
             const orderId = Number(insertOrderResult.insertId);
@@ -264,7 +267,9 @@ export const createOrder = async (dto: CreateOrderDto, screenshot: Express.Multe
             return orderId;
         });
     } catch (error) {
-        await deleteImage(uploadedScreenshot.publicId).catch(() => undefined);
+        if (uploadedScreenshot) {
+            await deleteImage(uploadedScreenshot.publicId).catch(() => undefined);
+        }
         throw error;
     }
 

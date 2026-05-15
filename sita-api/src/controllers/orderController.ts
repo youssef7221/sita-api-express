@@ -36,7 +36,8 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
         }
 
         const screenshot = req.file as Express.Multer.File | undefined;
-        if (!screenshot) {
+        const isCashOnDelivery = validationResult.data.paymentType.toLowerCase() === "cash on delivery";
+        if (!isCashOnDelivery && !screenshot) {
             throw new BadRequestError("screenshot is required");
         }
 

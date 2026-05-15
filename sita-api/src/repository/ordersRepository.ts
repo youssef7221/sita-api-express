@@ -13,8 +13,8 @@ type CreateOrderInsertInput = {
     shippingFee: string;
     total: string;
     paymentMethod: string;
-    paymentType: string;
-    screenshotUrl: string;
+    paymentType: string | null;
+    screenshotUrl: string | null;
 };
 
 type CreateOrderItemInsertInput = {
